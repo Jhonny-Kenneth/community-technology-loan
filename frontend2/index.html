@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Community Technology Loan management system for City of Orlando staff."
+    >
+
+    <meta
+        name="author"
+        content="Community Technology Loan Project"
+    >
+
+    <meta
+        name="theme-color"
+        content="#102f50"
+    >
+
+    <title>
+        Tech Loan | City of Orlando
+    </title>
+
+    <!--
+        Main application stylesheet.
+        Contains:
+        - Global styles
+        - Login
+        - Sidebar
+        - Dashboard
+        - Inventory
+        - Tables
+        - Forms
+        - Modals
+        - Responsive behavior
+    -->
+    <link
+        rel="stylesheet"
+        href="css/styles.css"
+    >
+
+</head>
+
+
+<body>
+
+    <!-- =====================================================
+         APPLICATION ROOT
+    ====================================================== -->
+
+    <div
+        class="app-container"
+        id="app"
+        aria-live="polite"
+    >
+
+        <!--
+            The application UI is rendered by app.js.
+
+            When the user is not authenticated:
+                Login screen is displayed.
+
+            When authenticated:
+                Sidebar + Dashboard are displayed.
+
+            This prevents duplicate HTML structures and keeps
+            navigation controlled by a single JavaScript state.
+        -->
+
+        <div
+            class="app-loading"
+            id="app-loading"
+            role="status"
+            aria-live="polite"
+        >
+
+            <div class="loading-content">
+
+                <div class="loading-brand">
+                    Tech Loan
+                </div>
+
+                <div class="loading-subtitle">
+                    City of Orlando
+                </div>
+
+                <div
+                    class="loading-spinner"
+                    aria-hidden="true"
+                ></div>
+
+                <p>
+                    Loading application...
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         NOSCRIPT FALLBACK
+    ====================================================== -->
+
+    <noscript>
+
+        <div class="noscript-message">
+
+            <h1>
+                JavaScript Required
+            </h1>
+
+            <p>
+                The Community Technology Loan management system
+                requires JavaScript to be enabled in your browser.
+            </p>
+
+        </div>
+
+    </noscript>
+
+
+    <!-- =====================================================
+         APPLICATION JAVASCRIPT
+    ====================================================== -->
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js" defer></script>
+
+</body>
+
+</html>
