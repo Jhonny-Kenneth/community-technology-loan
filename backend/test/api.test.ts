@@ -133,6 +133,15 @@ test("monitoring counts completed requests", async (t) => {
   assert.ok(response.json().data.averageLatencyMs >= 0);
 });
 
+test("service root identifies the API and operational endpoints", async (t) => {
+  const app = await buildApp(); t.after(() => app.close());
+  const response = await app.inject({ method: "GET", url: "/" });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().service, "Community Technology Loan API");
+  assert.equal(response.json().endpoints.health, "/health");
+  assert.equal(response.json().endpoints.readiness, "/ready");
+});
+
 test("Prometheus endpoint exposes HTTP and runtime metrics", async (t) => {
   const app = await buildApp(); t.after(() => app.close());
   await app.inject({ method: "GET", url: "/health" });

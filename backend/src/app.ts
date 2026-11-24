@@ -48,6 +48,11 @@ export async function buildApp(repository: InventoryRepository = new InMemoryInv
   });
   app.setErrorHandler((error, request, reply) => { request.log.warn({ err: error, requestId: request.id }, "Request failed"); const known = error as Error & { statusCode?: number; issues?: unknown }; const statusCode = known.statusCode && known.statusCode >= 400 ? known.statusCode : 500; reply.code(statusCode).send({ error: statusCode === 500 ? "Internal server error" : known.message, requestId: request.id, ...(known.issues ? { details: known.issues } : {}) }); });
 
+  app.get("/", async () => ({
+    service: "Community Technology Loan API",
+    status: "ok",
+    endpoints: { health: "/health", readiness: "/ready", api: "/v1" },
+  }));
   app.get("/ready", async (_request, reply) => { if (repository instanceof PostgresInventoryRepository) { try { await repository.health(); databaseReady.set(1); return { status: "ready" }; } catch { databaseReady.set(0); return reply.code(503).send({ status: "not_ready" }); } } databaseReady.set(1); return { status: "ready", mode: "memory" }; });
   app.get("/health", async () => ({ status: "ok" }));
   app.get("/metrics", async (_request, reply) => reply.type(metricsRegistry.contentType).send(await metricsRegistry.metrics()));

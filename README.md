@@ -132,6 +132,12 @@ Grafana automatically provisions the Prometheus data source and the **Community 
 
 When `OTEL_EXPORTER_OTLP_ENDPOINT` is set, the API auto-instruments Node.js, Fastify, HTTP, PostgreSQL, and Pino. Traces and structured log records are exported through OTLP. Console logs include `trace_id` and `span_id` for correlation. The included collector uses its debug exporter for local inspection; replace or extend that exporter with your production telemetry backend before production deployment.
 
+## Render production environment
+
+Use `.env.production.example` as the authoritative list of production variables. Do not commit a populated `.env` file. For an existing Render Web Service, add the variables under **Service > Environment** and use Render's PostgreSQL **Internal Database URL** for `DATABASE_URL`.
+
+Required values are `DATABASE_URL`, a randomly generated `JWT_SECRET` of at least 32 characters, and the exact HTTPS frontend origin in `CORS_ORIGINS`. Set the health-check path to `/health`. Render supplies `PORT`; the API listens on that value and `0.0.0.0`.
+
 ## Requirements and Design Documentation
 
 The project Technical Design Document currently contains:

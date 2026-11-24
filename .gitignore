@@ -8,6 +8,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+!.env.production.example
 *.local
 
 # --- Build and package output ---
