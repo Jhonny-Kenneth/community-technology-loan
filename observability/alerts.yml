@@ -1,0 +1,24 @@
+groups:
+  - name: community-technology-loan
+    rules:
+      - alert: ApiHighServerErrorRate
+        expr: sum(rate(ctl_http_requests_total{status_code=~"5.."}[5m])) / clamp_min(sum(rate(ctl_http_requests_total[5m])), 0.001) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: API server error rate is above 5%
+      - alert: ApiHighLatency
+        expr: histogram_quantile(0.95, sum by (le) (rate(ctl_http_request_duration_seconds_bucket[5m]))) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: API p95 latency is above one second
+      - alert: DatabaseNotReady
+        expr: ctl_database_ready == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: API database readiness check is failing

@@ -3,7 +3,7 @@ import test from "node:test";
 import { buildApp } from "../src/app.js";
 
 process.env.JWT_SECRET = "test-secret-that-is-long-enough-for-jwt-signing";
-const allRoles = ["inventory:read", "inventory:write", "loans:read", "loans:write", "centers:read", "centers:write", "maintenance:read", "maintenance:write", "loan-reasons:read", "loan-reasons:write"];
+const allRoles = ["inventory:read", "inventory:write", "loans:read", "loans:write", "centers:read", "centers:write", "maintenance:read", "maintenance:write", "loan-reasons:read", "loan-reasons:write", "reports:read", "users:manage", "settings:manage", "monitoring:read"];
 async function session(roles = allRoles, tenantId = "eigen-it") { const app = await buildApp(); const token = app.jwt.sign({ sub: "test-user", tenantId, roles }); return { app, headers: { authorization: `Bearer ${token}` } }; }
 const device = { assetTag: "NEW-1", serialNumber: "SERIAL-1", deviceType: "TABLET", manufacturer: "Example", model: "T1", status: "AVAILABLE", centerId: 1 };
 const loan = { deviceId: 1, centerId: 1, reasonId: 1, participantCode: "P-1", checkoutDate: "2026-09-01T10:00:00.000Z", dueDate: "2026-10-01T10:00:00.000Z" };
@@ -95,4 +95,51 @@ test("development token does not require roles in the request", async (t) => {
 test("development token is absent in production", async (t) => {
   const previous = process.env.NODE_ENV; process.env.NODE_ENV = "production"; const app = await buildApp(); t.after(async () => { await app.close(); if (previous === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = previous; });
   assert.equal((await app.inject({ method: "POST", url: "/v1/dev/token", payload: { tenantId: "x" } })).statusCode, 404);
+});
+
+test("reports, settings, and monitoring require explicit roles", async (t) => {
+  const { app, headers } = await session(); t.after(() => app.close());
+  const report = await app.inject({ method: "GET", url: "/v1/reports/summary", headers });
+  assert.equal(report.statusCode, 200); assert.equal(report.json().data.inventory.total, 10);
+  assert.equal((await app.inject({ method: "GET", url: "/v1/monitoring", headers })).statusCode, 200);
+  assert.equal((await app.inject({ method: "PUT", url: "/v1/settings", headers, payload: { defaultDepreciationRate: 25, theme: "dark" } })).statusCode, 200);
+  const limited = app.jwt.sign({ tenantId: "eigen-it", roles: ["inventory:read"] });
+  assert.equal((await app.inject({ method: "GET", url: "/v1/reports/summary", headers: { authorization: `Bearer ${limited}` } })).statusCode, 403);
+});
+
+test("signup validates strong passwords before requiring persistent storage", async (t) => {
+  const app = await buildApp(); t.after(() => app.close());
+  const weak = await app.inject({ method: "POST", url: "/v1/auth/signup", payload: { tenantId: "eigen-it", name: "New Staff", email: "staff@example.org", password: "short" } });
+  assert.equal(weak.statusCode, 400);
+  const valid = await app.inject({ method: "POST", url: "/v1/auth/signup", payload: { tenantId: "eigen-it", name: "New Staff", email: "staff@example.org", password: "StrongPassword42" } });
+  assert.equal(valid.statusCode, 503);
+});
+
+test("inventory accepts and returns depreciation inputs", async (t) => {
+  const { app, headers } = await session(); t.after(() => app.close());
+  const created = await app.inject({ method: "POST", url: "/v1/inventory", headers, payload: { ...device, assetTag: "VALUE-1", serialNumber: "VALUE-SERIAL-1", purchaseDate: "2025-01-15", purchaseCost: 1200, depreciationRate: 25 } });
+  assert.equal(created.statusCode, 201);
+  assert.equal(created.json().data.purchaseCost, 1200);
+  assert.equal(created.json().data.depreciationRate, 25);
+  assert.equal(created.json().data.purchaseDate, "2025-01-15");
+});
+
+test("monitoring counts completed requests", async (t) => {
+  const { app, headers } = await session(); t.after(() => app.close());
+  await app.inject({ method: "GET", url: "/health" });
+  const response = await app.inject({ method: "GET", url: "/v1/monitoring", headers });
+  assert.equal(response.statusCode, 200);
+  assert.ok(response.json().data.requests >= 1);
+  assert.ok(response.json().data.averageLatencyMs >= 0);
+});
+
+test("Prometheus endpoint exposes HTTP and runtime metrics", async (t) => {
+  const app = await buildApp(); t.after(() => app.close());
+  await app.inject({ method: "GET", url: "/health" });
+  const response = await app.inject({ method: "GET", url: "/metrics" });
+  assert.equal(response.statusCode, 200);
+  assert.match(response.headers["content-type"], /text\/plain/);
+  assert.match(response.body, /ctl_http_requests_total/);
+  assert.match(response.body, /ctl_http_request_duration_seconds_bucket/);
+  assert.match(response.body, /ctl_process_resident_memory_bytes/);
 });

@@ -35,6 +35,9 @@ export interface Device {
   model: string;
   status: DeviceStatus;
   centerId: number;
+  purchaseDate?: string | null;
+  purchaseCost?: number;
+  depreciationRate?: number | null;
 }
 
 /** API representation of a row from the outreach_centers table. */

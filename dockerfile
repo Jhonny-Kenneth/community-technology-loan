@@ -1,17 +1,10 @@
-# syntax=docker/dockerfile:1
-# Example Dockerfile for a Node.js application using Alpine Linux
-
 FROM node:22-alpine
-
 WORKDIR /app
-
 RUN apk add --no-cache curl
-
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
-
+COPY package*.json ./
+RUN npm ci
 COPY . .
-
-EXPOSE 3443
-
-CMD ["node", "src/server.js"]
+RUN npm run build
+ENV NODE_ENV=production
+EXPOSE 3020
+CMD ["node", "dist/server.js"]

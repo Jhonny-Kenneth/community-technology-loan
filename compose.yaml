@@ -1,0 +1,86 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: community_outreach_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d community_outreach_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: ../dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/community_outreach_db
+      JWT_SECRET: local-development-secret-that-is-at-least-32-characters
+      CORS_ORIGINS: http://localhost:8080,http://localhost:3000
+      NODE_ENV: development
+      PORT: 3020
+      OTEL_SERVICE_NAME: community-technology-loan-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_LOG_LEVEL: info
+    ports:
+      - "3020:3020"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:13.3.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.165.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./observability/otel-collector.yml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:

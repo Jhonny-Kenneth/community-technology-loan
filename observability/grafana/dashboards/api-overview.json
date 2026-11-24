@@ -1,0 +1,64 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Request rate",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum by (method) (rate(ctl_http_requests_total[5m]))", "legendFormat": "{{method}}" }],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Response latency",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(ctl_http_request_duration_seconds_bucket[5m])))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(ctl_http_request_duration_seconds_bucket[5m])))", "legendFormat": "p95" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "5xx responses (5m)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(increase(ctl_http_requests_total{status_code=~\"5..\"}[5m]))" }],
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 8 }
+    },
+    {
+      "type": "stat",
+      "title": "Active requests",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(ctl_http_active_requests)" }],
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 8 }
+    },
+    {
+      "type": "stat",
+      "title": "Database ready",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "min(ctl_database_ready)" }],
+      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "Not ready", "color": "red" }, "1": { "text": "Ready", "color": "green" } } }], "color": { "mode": "thresholds" } }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 8 }
+    },
+    {
+      "type": "stat",
+      "title": "Resident memory",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(ctl_process_resident_memory_bytes)" }],
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 8 }
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": ["community-technology-loan", "api"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "title": "Community Technology Loan API",
+  "uid": "ctl-api-overview",
+  "version": 1
+}
