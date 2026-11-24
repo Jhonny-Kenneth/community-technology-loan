@@ -1,0 +1,62 @@
+version: "1"
+
+services:
+  - type: web
+    name: inventory-api
+    runtime: docker
+    repo: https://github.com/Jhonny-Kenneth/community-technology-loan
+    branch: Full-Integration
+    plan: free
+    region: oregon
+    dockerContext: .
+    dockerfilePath: ./dockerfile
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      # Keep DATABASE_URL and any provider-specific secrets in this existing
+      # Render environment group. Do not commit them to this file.
+      - fromGroup: Production
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        fromService:
+          type: web
+          name: community-technology-loan
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: OTEL_SERVICE_NAME
+        value: community-technology-loan-api
+
+  - type: web
+    name: community-technology-loan
+    runtime: static
+    repo: https://github.com/Jhonny-Kenneth/community-technology-loan
+    branch: Full-Integration
+    buildCommand: >-
+      npm ci --prefix frontend &&
+      npm run build --prefix frontend &&
+      mkdir -p frontend-dist &&
+      cp frontend/index.html frontend-dist/ &&
+      cp -R frontend/css frontend/js frontend-dist/
+    staticPublishPath: ./frontend-dist
+    autoDeployTrigger: commit
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
