@@ -1,0 +1,9 @@
+FROM prom/prometheus:v3.15.1
+USER root
+COPY observability/prometheus.render.yml /etc/prometheus/prometheus.render.yml
+COPY observability/alerts.yml /etc/prometheus/alerts.yml
+COPY deploy/prometheus-entrypoint.sh /usr/local/bin/prometheus-entrypoint.sh
+RUN chmod 755 /usr/local/bin/prometheus-entrypoint.sh
+USER nobody
+EXPOSE 10000
+ENTRYPOINT ["/usr/local/bin/prometheus-entrypoint.sh"]

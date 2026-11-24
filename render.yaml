@@ -6,57 +6,123 @@ services:
     runtime: docker
     repo: https://github.com/Jhonny-Kenneth/community-technology-loan
     branch: Full-Integration
-    plan: free
+    plan: 0.5c-512mb
     region: oregon
     dockerContext: .
     dockerfilePath: ./dockerfile
-    healthCheckPath: /health
+    healthCheckPath: /
     autoDeployTrigger: commit
     envVars:
-      # Keep DATABASE_URL and any provider-specific secrets in this existing
-      # Render environment group. Do not commit them to this file.
+      - key: PORT
+        value: 10000
+      - key: API_UPSTREAM
+        fromService:
+          type: pserv
+          name: inventory-api-private
+          property: hostport
+
+  - type: pserv
+    name: inventory-api-private
+    runtime: docker
+    repo: https://github.com/Jhonny-Kenneth/community-technology-loan
+    branch: Full-Integration
+    plan: 0.5c-512mb
+    region: oregon
+    dockerContext: .
+    dockerfilePath: ./dockerfile.backend
+    autoDeployTrigger: commit
+    envVars:
+      # DATABASE_URL in this group must be Render Postgres's Internal Database URL.
       - fromGroup: Production
-      - key: NODE_ENV
-        value: production
+      - key: PORT
+        value: 10000
       - key: HOST
         value: 0.0.0.0
+      - key: NODE_ENV
+        value: production
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGINS
         fromService:
           type: web
-          name: community-technology-loan
+          name: inventory-api
           envVarKey: RENDER_EXTERNAL_URL
       - key: OTEL_SERVICE_NAME
         value: community-technology-loan-api
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
+        fromService:
+          type: pserv
+          name: observability-collector
+          property: hostport
+      - key: GRAFANA_URL
+        fromService:
+          type: web
+          name: observability-grafana
+          envVarKey: RENDER_EXTERNAL_URL
 
-  - type: web
-    name: community-technology-loan
-    runtime: static
+  - type: pserv
+    name: observability-collector
+    runtime: docker
     repo: https://github.com/Jhonny-Kenneth/community-technology-loan
     branch: Full-Integration
-    buildCommand: >-
-      npm ci --prefix frontend &&
-      npm run build --prefix frontend &&
-      mkdir -p frontend-dist &&
-      cp frontend/index.html frontend-dist/ &&
-      cp -R frontend/css frontend/js frontend-dist/
-    staticPublishPath: ./frontend-dist
+    plan: 0.5c-512mb
+    region: oregon
+    dockerContext: .
+    dockerfilePath: ./dockerfile.otel
     autoDeployTrigger: commit
-    headers:
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /*
-        name: X-Frame-Options
-        value: DENY
-      - path: /*
-        name: Referrer-Policy
-        value: strict-origin-when-cross-origin
-      - path: /*
-        name: Permissions-Policy
-        value: camera=(), microphone=(), geolocation=()
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    envVars:
+      - key: PORT
+        value: 4318
+
+  - type: pserv
+    name: observability-prometheus
+    runtime: docker
+    repo: https://github.com/Jhonny-Kenneth/community-technology-loan
+    branch: Full-Integration
+    plan: 0.5c-512mb
+    region: oregon
+    dockerContext: .
+    dockerfilePath: ./dockerfile.prometheus
+    autoDeployTrigger: commit
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: API_TARGET
+        fromService:
+          type: pserv
+          name: inventory-api-private
+          property: hostport
+    disk:
+      name: prometheus-data
+      mountPath: /prometheus
+      sizeGB: 10
+
+  - type: web
+    name: observability-grafana
+    runtime: docker
+    repo: https://github.com/Jhonny-Kenneth/community-technology-loan
+    branch: Full-Integration
+    plan: 0.5c-512mb
+    region: oregon
+    dockerContext: .
+    dockerfilePath: ./dockerfile.grafana
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: GF_SERVER_HTTP_PORT
+        value: 10000
+      - key: GF_SECURITY_ADMIN_USER
+        value: admin
+      - key: GF_SECURITY_ADMIN_PASSWORD
+        generateValue: true
+      - key: GF_USERS_ALLOW_SIGN_UP
+        value: false
+      - key: PROMETHEUS_HOSTPORT
+        fromService:
+          type: pserv
+          name: observability-prometheus
+          property: hostport
+    disk:
+      name: grafana-data
+      mountPath: /var/lib/grafana
+      sizeGB: 10

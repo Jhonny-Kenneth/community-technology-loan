@@ -1,24 +1,15 @@
 FROM node:22-alpine AS build
-WORKDIR /app
-
-# The deploy context is the repository root, but the API is a workspace under
-# backend/. Install from its lockfile so Render builds the intended service.
-COPY backend/package*.json ./
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
 RUN npm ci
-COPY backend/tsconfig.json ./
-COPY backend/src ./src
+COPY frontend/tsconfig.json ./
+COPY frontend/src ./src
 RUN npm run build
-RUN npm prune --omit=dev
 
-FROM node:22-alpine AS runtime
-WORKDIR /app
-RUN apk add --no-cache curl
-ENV NODE_ENV=production
-
-COPY --from=build /app/package*.json ./
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-
-# Render supplies PORT (10000 by default); the API reads it at runtime.
+FROM nginx:1.29-alpine AS runtime
+ENV NGINX_ENVSUBST_FILTER="^(PORT|API_UPSTREAM)$"
+COPY frontend/index.html /usr/share/nginx/html/index.html
+COPY frontend/css /usr/share/nginx/html/css
+COPY --from=build /app/frontend/js /usr/share/nginx/html/js
+COPY deploy/nginx-render.conf.template /etc/nginx/templates/default.conf.template
 EXPOSE 10000
-CMD ["node", "dist/server.js"]

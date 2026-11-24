@@ -138,6 +138,10 @@ Use `.env.production.example` as the authoritative list of production variables.
 
 Required values are `DATABASE_URL`, a randomly generated `JWT_SECRET` of at least 32 characters, and the exact HTTPS frontend origin in `CORS_ORIGINS`. Set the health-check path to `/health`. Render supplies `PORT`; the API listens on that value and `0.0.0.0`.
 
+The production Blueprint uses `inventory-api` as the public Nginx frontend gateway so the existing public URL serves the GUI. It proxies API requests to `inventory-api-private` over Render's private network. The API connects to PostgreSQL using the `DATABASE_URL` stored in the `Production` environment group; this value must be Render's **Internal Database URL**.
+
+Prometheus and the OpenTelemetry Collector are private services. Grafana is the authenticated public observability UI and is linked from Admin Settings. Prometheus and Grafana use persistent disks, and Render private services require paid service plans; review the resources and costs shown by Render before applying the Blueprint.
+
 ## Requirements and Design Documentation
 
 The project Technical Design Document currently contains:

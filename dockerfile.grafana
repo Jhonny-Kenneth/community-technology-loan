@@ -1,0 +1,4 @@
+FROM grafana/grafana:13.3.0
+COPY observability/grafana/provisioning /etc/grafana/provisioning
+COPY observability/grafana/dashboards /etc/grafana/dashboards
+EXPOSE 10000

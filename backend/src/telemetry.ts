@@ -7,7 +7,10 @@ import { PinoInstrumentation } from "@opentelemetry/instrumentation-pino";
 import { BatchLogRecordProcessor } from "@opentelemetry/sdk-logs";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 
-const baseUrl = process.env.OTEL_EXPORTER_OTLP_ENDPOINT?.replace(/\/$/, "");
+const configuredEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT?.replace(/\/$/, "");
+const baseUrl = configuredEndpoint && /^https?:\/\//.test(configuredEndpoint)
+  ? configuredEndpoint
+  : configuredEndpoint ? `http://${configuredEndpoint}` : undefined;
 
 export const telemetrySdk = baseUrl
   ? new NodeSDK({

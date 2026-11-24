@@ -18,8 +18,8 @@ services:
 
   api:
     build:
-      context: ./backend
-      dockerfile: ../dockerfile
+      context: .
+      dockerfile: dockerfile.backend
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/community_outreach_db
       JWT_SECRET: local-development-secret-that-is-at-least-32-characters

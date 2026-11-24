@@ -1,0 +1,4 @@
+FROM otel/opentelemetry-collector-contrib:0.165.0
+COPY observability/otel-collector.yml /etc/otelcol-contrib/config.yaml
+EXPOSE 4318
+CMD ["--config=/etc/otelcol-contrib/config.yaml"]
